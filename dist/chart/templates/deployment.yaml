@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "far-edge-node-watcher.fullname" . }}
+  labels:
+    {{- include "far-edge-node-watcher.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "far-edge-node-watcher.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "far-edge-node-watcher.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "far-edge-node-watcher.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [ "python3", "-u", "main.py" ]
+          args:
+            - --mqtt_uri={{ include "missing.required" (dict "Message" "MQTT broker host is required" "Value" .Values.mqttBroker.host) }}
+            - --mqtt_port={{ .Values.mqttBroker.port }}
+            - --mqtt_client_id={{ .Values.mqttBroker.clientId }}
+            - --kubelet_image={{ .Values.farEdgeKubelet.image.repository }}:{{ .Values.farEdgeKubelet.image.tag }}
+            - --image_pull_policy={{ .Values.farEdgeKubelet.image.pullPolicy }}
+            - --local_registry_path={{ .Values.farEdgeKubelet.registry.localRegistry }}
+            - --remote_registry_url={{ .Values.farEdgeKubelet.registry.url }}
+          {{- if .Values.farEdgeKubelet.registry.overrideRegistry }}
+            - --remote_registry_override
+          {{- end }}
+          {{- if .Values.farEdgeKubelet.registry.overrideDefaultRegistry }}
+            - --remote_registry_override_default
+          {{- end }}
+          {{- if .Values.farEdgeKubelet.registry.insecure }}
+            - --remote_registry_insecure
+          {{- end }}
+          {{- if .Values.farEdgeKubelet.registry.plainHTTP }}
+            - --remote_registry_plain_http
+          {{- end }}
+          {{- if and .Values.farEdgeKubelet.registry.username .Values.farEdgeKubelet.registry.password }}
+            - --remote_registry_username={{ .Values.farEdgeKubelet.registry.username }}
+            - --remote_registry_password={{ .Values.farEdgeKubelet.registry.password }}
+          {{- else if .Values.farEdgeKubelet.registry.registryPullSecret }}
+            - --remote_registry_creds_secret={{ .Values.farEdgeKubelet.registry.registryPullSecret }}
+          {{- end }}
+          {{- range .Values.imagePullSecrets }}
+            - --image_pull_secret={{ .name }}
+          {{- end }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_ACCOUNT_NAME
+              value: {{ include "far-edge-kubelet.fullname" . }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

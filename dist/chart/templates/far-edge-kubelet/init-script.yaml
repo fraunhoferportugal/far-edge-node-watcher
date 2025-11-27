@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: far-edge-kubelet-certificate-request-script
+data:
+  generate-cert.sh: |
+    #!/bin/bash
+
+    set -e
+    # Define the namespace for the Far-Edge Kubelet
+    NAMESPACE="${NAMESPACE:-default}"
+    # Define the name of the CSR
+    CSR_NAME="$NODE_NAME-far-edge-kubelet-serving-cert"
+    # Define the location where the key and CSR will be saved
+    CERT_DIR="/etc/certificates"
+
+    # Create the directory if it doesn't exist
+    mkdir -p $CERT_DIR
+
+    # Generate a private key and CSR using OpenSSL
+    echo "Generating private key and CSR..."
+    openssl req -new -newkey rsa:2048 -days 365 -nodes -keyout $CERT_DIR/cert.key -out $CERT_DIR/cert.csr \
+        -subj "/CN=system:node:${NODE_NAME}/O=system:nodes" \
+        -addext "subjectAltName = IP:$POD_IP, DNS:$NODE_NAME.$NAMESPACE, DNS:$NODE_NAME.$NAMESPACE.svc"
+
+    # Base64 encode the CSR
+    CSR_BASE64=$(cat $CERT_DIR/cert.csr | base64 | tr -d '\n')
+
+    # Delete CSR object of previous kubelets from Kubernetes using kubectl
+    set +e
+    kubectl delete csr $CSR_NAME
+    set -e 
+
+    echo "Creating CSR object in Kubernetes..."
+    kubectl apply -f - <<EOF
+    apiVersion: certificates.k8s.io/v1
+    kind: CertificateSigningRequest
+    metadata:
+      name: $CSR_NAME
+    spec:
+      request: $CSR_BASE64
+      signerName: kubernetes.io/kubelet-serving
+      usages:
+      - key encipherment 
+      - digital signature
+      - server auth
+    EOF
+
+    # Wait for the CSR to be approved and signed
+    echo "Waiting for CSR approval..."
+    kubectl certificate approve $CSR_NAME
+
+    # Wait for the certificate to be signed
+    echo "Waiting for the certificate to be signed..."
+    while true; do
+      # Check the status of the CSR
+      STATUS=$(kubectl get csr $CSR_NAME -o jsonpath='{.status.conditions[?(@.type=="Approved")].status}')
+
+      if [[ "$STATUS" == "True" ]]; then
+        echo "CSR approved and signed."
+        break
+      else
+        echo "Waiting for approval..."
+        sleep 5
+      fi
+    done
+
+    # Retrieve the signed certificate
+    echo "Retrieving the signed certificate..."
+    kubectl get csr $CSR_NAME -o jsonpath='{.status.certificate}' | base64 -d > $CERT_DIR/cert.crt
+
+    echo "Certificate generation and signing completed."
+
+    set +e
