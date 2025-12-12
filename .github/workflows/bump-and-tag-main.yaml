@@ -36,7 +36,7 @@ jobs:
   create-tag:
     needs: check-skip
     if: needs.check-skip.outputs.skip-tag == 'false'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       new-tag: ${{ steps.tag.outputs.new-tag }}
       skip-app-release: ${{ steps.bump.outputs.skip-app-bump }}
@@ -100,9 +100,9 @@ jobs:
         id: tag
         run: |
           output=$(
-            relsync bump ${{ steps.bump.outputs.app_bump }} \
-              $([[ "${{ steps.bump.outputs.skip_app_bump }}" == "true" ]] && echo "--skip-repo-bump") \
-              --chart-bump-type "${{ steps.bump.outputs.chart_bump }}" \
+            relsync bump ${{ steps.bump.outputs.app-bump }} \
+              $([[ "${{ steps.bump.outputs.skip-app-bump }}" == "true" ]] && echo "--skip-repo-bump") \
+              --chart-bump-type "${{ steps.bump.outputs.chart-bump }}" \
               --commit \
               --create-tag \
               -o json
@@ -113,7 +113,7 @@ jobs:
         
       - name: Push the new tag
         run: |
-          git push origin ${{ steps.tag.outputs.new_tag }}
+          git push origin ${{ steps.tag.outputs.new-tag }}
 
   release:
     needs: create-tag
