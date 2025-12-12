@@ -36,7 +36,7 @@ jobs:
   create-tag:
     needs: check-skip
     if: needs.check-skip.outputs.skip-tag == 'false'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       new-tag: ${{ steps.tag.outputs.new-tag }}
       skip-app-release: ${{ steps.bump.outputs.skip-app-bump }}
