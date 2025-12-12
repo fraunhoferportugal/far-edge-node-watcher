@@ -42,7 +42,7 @@ jobs:
       skip-app-release: ${{ steps.bump.outputs.skip-app-bump }}
     steps:
       - name: Install RelSync
-        run: pip install git+https://github.com/fraunhoferportugal/RelSync.git@main
+        run: pip install git+https://github.com/fraunhoferportugal/RelSync.git@main --break-system-packages
 
       - name: Checkout repo
         uses: actions/checkout@v6
