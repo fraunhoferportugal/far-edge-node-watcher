@@ -8,7 +8,7 @@ on:
         required: false
         type: string
         default: ""
-      skip_app_release:
+      skip-app-release:
         description: "Whether to build and release the application or only its $chart_name"
         required: false
         type: boolean
@@ -21,7 +21,7 @@ on:
         required: false
         type: string
         default: ""
-      skip_app_release:
+      skip-app-release:
         description: "Whether to build and release the application or only its $chart_name"
         required: false
         type: boolean
@@ -80,7 +80,7 @@ jobs:
   test-and-lint:
     name: Test and Lint
     needs: set-skip-app-release
-    if: needs.set-skip-app-release.outputs.release == 'false'
+    if: needs.set-skip-app-release.outputs.skip-app-release == 'false'
     uses: ./.github/workflows/test-and-lint.yaml
 
   build-and-publish:
