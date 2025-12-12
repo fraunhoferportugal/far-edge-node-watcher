@@ -1,7 +1,31 @@
 name: Release
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release"
+        required: false
+        type: string
+        default: ""
+      skip_app_release:
+        description: "Whether to build and release the application or only its $chart_name"
+        required: false
+        type: boolean
+        default: false
+
+  workflow_call:
+    inputs:
+      tag:
+        description: "Tag to release"
+        required: false
+        type: string
+        default: ""
+      skip_app_release:
+        description: "Whether to build and release the application or only its $chart_name"
+        required: false
+        type: boolean
+        default: false
 
   push:
     tags:
@@ -11,24 +35,60 @@ jobs:
   validate-tag:
     runs-on: self-hosted
     outputs:
+      tag: ${{ steps.tag.outputs.tag-name }}
       semver-valid: ${{ steps.check-tag.outputs.valid }}
     steps:
       - uses: actions/checkout@v6
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAG_NAME="${{ inputs.tag }}"
+          elif [[ "$GITHUB_REF" =~ refs/tags/(.+) ]]; then
+            TAG_NAME="${BASH_REMATCH[1]}"
+          else
+            echo "No tag found"
+            exit 1
+          fi
+          echo "tag-name=$TAG_NAME" >> $GITHUB_OUTPUT
+
       - name: Check if tag is a valid SemVer
         id: check-tag
         run: |
           python3 -u .github/scripts/semver_regex.py
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.tag.outputs.tag-name }}
 
-  format-and-lint:
+  set-skip-app-release:
     needs: validate-tag
     if: needs.validate-tag.outputs.semver-valid == 'true'
-    uses: ./.github/workflows/validate.yaml
+    outputs:
+      skip-app-release: ${{ steps.skip.outputs.skip-app-release }}
+    runs-on: self-hosted
+    steps:
+      - name: Set skip app release
+        id: skip
+        run: |
+          if [ -n "${{ inputs.skip-app-release }}" ]; then
+            skip_app_release="${{ inputs.skip-app-release }}"
+          else
+            skip_app_release="false"
+          fi
+          echo "skip-app-release=$skip_app_release" >> $GITHUB_OUTPUT
+
+  test-and-lint:
+    name: Test and Lint
+    needs: set-skip-app-release
+    if: needs.set-skip-app-release.outputs.release == 'false'
+    uses: ./.github/workflows/test-and-lint.yaml
 
   build-and-publish:
     runs-on: self-hosted
-    needs: format-and-lint
+    needs: test-and-lint
+    permissions:
+      contents: write
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -64,7 +124,11 @@ jobs:
 
   helm-chart:
     runs-on: self-hosted
-    needs: build-and-publish
+    needs: ['validate-tag', 'build-and-publish', 'set-skip-app-release']
+    if: ${{ always() }}
+    permissions:
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v6
       - name: Set up Helm
@@ -100,6 +164,6 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           draft: true
-          tag: ${{ github.ref }}
+          tag: ${{ needs.validate-tag.outputs.tag }}
           file: deploy/${{ steps.chart_data.outputs.chart_name }}-${{ steps.chart_data.outputs.chart_version }}.tgz
           overwrite: true
