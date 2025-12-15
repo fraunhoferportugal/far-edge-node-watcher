@@ -113,13 +113,6 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Check available tags
-        run: |
-          echo "$(git show-ref --tags)"
-          git fetch --tags --force
-          echo "After force pull"
-          echo "$(git show-ref --tags)"
-      
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
