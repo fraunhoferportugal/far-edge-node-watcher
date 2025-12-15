@@ -114,13 +114,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: refs/tags/${{ needs.validate-tag.outputs.tag }}
-
-      - name: Debug step
-        run: |
-          echo "${{ needs.validate-tag.outputs.tag }}"
-          echo "$(git show-ref --tags)"
-          echo "HEAD commit: $(git rev-parse HEAD)"
-          echo "$(git describe --exact-match --tags HEAD)"
       
       - name: Run GoReleaser
         id: goreleaser
@@ -131,10 +124,6 @@ jobs:
           args: --config .goreleaser.yaml --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Echo GoReleaser outputs
-        run:
-          echo ${{ toJSON(steps.goreleaser.outputs) }}
 
   helm-chart:
     runs-on: self-hosted
