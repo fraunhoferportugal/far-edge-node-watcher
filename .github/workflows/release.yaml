@@ -90,11 +90,6 @@ jobs:
       contents: write
       packages: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
       - name: Install Golang
         uses: actions/setup-go@v6
         with:
@@ -112,7 +107,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+      
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Check available tags
+        run: |
+          echo "$(git show-ref --tags)"
+          git fetch --tags --force
+          echo "After force pull"
+          echo "$(git show-ref --tags)"
+      
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
