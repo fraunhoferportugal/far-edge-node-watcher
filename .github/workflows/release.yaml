@@ -177,7 +177,6 @@ jobs:
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
-          draft: true
           tag: ${{ needs.validate-tag.outputs.tag }}
           file: deploy/${{ steps.chart_data.outputs.chart_name }}-${{ steps.chart_data.outputs.chart_version }}.tgz
           overwrite: true
