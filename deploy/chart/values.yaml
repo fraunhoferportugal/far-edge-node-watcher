@@ -3,7 +3,7 @@ fullnameOverride: ''
 image:
   repository: harbor.nbfc.io/mlsysops/fita/far-edge-node-watcher
   pullPolicy: Always
-  tag: ""
+  tag: 0.0.1
 imagePullSecrets: []
 farEdgeKubelet:
   image:
