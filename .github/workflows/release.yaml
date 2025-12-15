@@ -126,9 +126,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   helm-chart:
+    name: Publish Helm chart
     runs-on: self-hosted
     needs: ['validate-tag', 'build-and-publish', 'set-skip-app-release']
-    if: ${{ needs.set-skip-app-release.outputs.skip-app-release == 'true' || needs.build-and-publish.result == 'success' }}
+    if: >-
+      ${{
+        always() &&
+        needs.validate-tag.result == 'success' &&
+        (
+          needs.set-skip-app-release.outputs.skip-app-release == 'true' ||
+          needs.build-and-publish.result == 'success'
+        )
+      }}
     permissions:
       contents: write
       packages: write
