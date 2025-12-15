@@ -39,7 +39,7 @@ jobs:
     runs-on: self-hosted
     outputs:
       new-tag: ${{ steps.tag.outputs.new-tag }}
-      skip-app-release: ${{ fromJSON(steps.bump.outputs.skip-app-bump) }}
+      skip-app-release: ${{ steps.bump.outputs.skip-app-bump }}
     steps:
       - name: Install RelSync
         run: pip install git+https://github.com/fraunhoferportugal/RelSync.git@main --break-system-packages
@@ -120,4 +120,4 @@ jobs:
     uses: ./.github/workflows/release.yaml
     with:
       tag: ${{ needs.create-tag.outputs.new-tag }}
-      skip-app-release: ${{ needs.create-tag.outputs.skip-app-release }}
+      skip-app-release: ${{ fromJSON(needs.create-tag.outputs.skip-app-release) }}
