@@ -123,6 +123,7 @@ jobs:
           echo "$(git describe --exact-match --tags HEAD)"
       
       - name: Run GoReleaser
+        id: goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -130,6 +131,10 @@ jobs:
           args: --config .goreleaser.yaml --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Echo GoReleaser outputs
+        run:
+          echo ${{ steps.goreleaser.outputs }}
 
   helm-chart:
     runs-on: self-hosted

@@ -122,3 +122,30 @@ jobs:
     with:
       tag: ${{ needs.create-tag.outputs.new-tag }}
       skip-app-release: ${{ fromJSON(needs.create-tag.outputs.skip-app-release) }}
+
+  sync-development:
+    name: Sync development branch
+    needs: release
+    runs-on: self-hosted
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: development
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge main into development
+        run: |
+          git fetch origin main
+          git merge --no-ff origin/main -m "Merge main into development after release ${{ needs.create-tag.outputs.new-tag }}" || true
+
+      - name: Push changes
+        run: |
+          git push origin development
