@@ -84,8 +84,9 @@ jobs:
     uses: ./.github/workflows/test-and-lint.yaml
 
   build-and-publish:
+    name: Build and publish
     runs-on: self-hosted
-    needs: test-and-lint
+    needs: ['test-and-lint', 'validate-tag']
     permissions:
       contents: write
       packages: write
@@ -133,7 +134,7 @@ jobs:
   helm-chart:
     runs-on: self-hosted
     needs: ['validate-tag', 'build-and-publish', 'set-skip-app-release']
-    if: ${{ always() }}
+    if: ${{ needs.set-skip-app-release.outputs.skip-app-release == 'true' || needs.build-and-publish.result == 'success' }}
     permissions:
       contents: write
       packages: write
