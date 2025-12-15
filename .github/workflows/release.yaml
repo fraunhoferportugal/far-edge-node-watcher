@@ -135,7 +135,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-tags: true
           ref: refs/tags/${{ needs.validate-tag.outputs.tag }}
 
       - name: Set up Helm
@@ -174,3 +173,4 @@ jobs:
           gh release upload "$TAG" deploy/${{ steps.chart_data.outputs.chart_name }}-chart-${{ steps.chart_data.outputs.chart_version }}.tgz --clobber
         env:
           TAG: ${{ needs.validate-tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
