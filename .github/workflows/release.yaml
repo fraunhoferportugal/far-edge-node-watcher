@@ -168,7 +168,7 @@ jobs:
       
       - name: Upload binaries to release
         run: |
-          gh release view "$TAG" || (echo "Release not found"; exit 1)
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --title "$TAG"
           mv deploy/${{ steps.chart_data.outputs.chart_name }}-${{ steps.chart_data.outputs.chart_version }}.tgz deploy/${{ steps.chart_data.outputs.chart_name }}-chart-${{ steps.chart_data.outputs.chart_version }}.tgz
           gh release upload "$TAG" deploy/${{ steps.chart_data.outputs.chart_name }}-chart-${{ steps.chart_data.outputs.chart_version }}.tgz --clobber
         env:
