@@ -134,7 +134,7 @@ jobs:
 
       - name: Echo GoReleaser outputs
         run:
-          echo ${{ steps.goreleaser.outputs }}
+          echo ${{ toJSON(steps.goreleaser.outputs) }}
 
   helm-chart:
     runs-on: self-hosted
