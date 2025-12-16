@@ -7,9 +7,9 @@ image:
 imagePullSecrets: []
 farEdgeKubelet:
   image:
-    repository: ghcr.io/fraunhoferportugal/fita/components/far-edge-node-watcher
+    repository: ghcr.io/fraunhoferportugal/fita/components/far-edge-kubelet
     pullPolicy: IfNotPresent
-    tag: 0.0.0
+    tag: 0.0.1
   registry:
     url: harbor.nbfc.io
     insecure: false
