@@ -11,7 +11,7 @@ farEdgeKubelet:
     pullPolicy: Always
     tag: 0.0.1
   registry:
-    url: ""
+    url: ''
     insecure: false
     plainHTTP: false
     overrideRegistry: false
