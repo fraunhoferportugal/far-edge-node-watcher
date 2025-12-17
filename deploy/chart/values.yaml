@@ -11,7 +11,7 @@ farEdgeKubelet:
     pullPolicy: Always
     tag: 0.0.1
   registry:
-    url: harbor.nbfc.io
+    url: ""
     insecure: false
     plainHTTP: false
     overrideRegistry: false
