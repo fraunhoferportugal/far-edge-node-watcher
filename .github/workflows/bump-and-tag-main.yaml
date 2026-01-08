@@ -14,7 +14,7 @@ permissions:
 jobs:
   check-skip:
     if: github.event.pull_request.merged == true
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       skip-tag: ${{ steps.check.outputs.skip-tag }}
 
@@ -36,7 +36,7 @@ jobs:
   create-tag:
     needs: check-skip
     if: needs.check-skip.outputs.skip-tag == 'false'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       new-tag: ${{ steps.tag.outputs.new-tag }}
       skip-app-release: ${{ steps.bump.outputs.skip-app-bump }}
@@ -128,7 +128,7 @@ jobs:
   sync-development:
     name: Sync development branch
     needs: release
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
