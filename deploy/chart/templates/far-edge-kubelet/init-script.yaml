@@ -7,7 +7,10 @@ data:
     #!/bin/bash
 
     set -e
-    LOG_LEVEL=1
+    LOG_LEVEL={{ .Values.farEdgeKubelet.initScript.logLevel }}
+    TIMEOUT={{ .Values.farEdgeKubelet.initScript.timeoutSeconds }}    # in seconds 
+    RETRY_INTERVAL={{ .Values.farEdgeKubelet.initScript.retryIntervalSeconds }}    # in seconds
+
     NAMESPACE="${NAMESPACE:-default}"
     CSR_NAME="$NODE_NAME-far-edge-kubelet-serving-cert"
     CERT_DIR="/etc/certificates"
@@ -24,12 +27,12 @@ data:
 
     CSR_BASE64=$(cat $CERT_DIR/cert.csr | base64 | tr -d '\n')
 
-    kubectl delete csr "$CSR_NAME" --ignore-not-found 
+    kubectl delete csr "$CSR_NAME" --ignore-not-found > /dev/null
 
     if (( LOG_LEVEL > 0)); then
         echo "Creating CSR object in Kubernetes..."
     fi
-    kubectl apply -f - <<EOF
+    kubectl apply -f - <<EOF > /dev/null
     apiVersion: certificates.k8s.io/v1
     kind: CertificateSigningRequest
     metadata:
@@ -43,7 +46,7 @@ data:
       - server auth
     EOF
 
-    kubectl certificate approve "$CSR_NAME"
+    kubectl certificate approve "$CSR_NAME" > /dev/null
     if (( LOG_LEVEL > 0)); then
         echo "Approved CSR"
     fi
@@ -51,28 +54,29 @@ data:
     if (( LOG_LEVEL > 0)); then
         echo "Waiting for request to be signed and certificate populated..."
     fi
-    for _ in {1..120}; do
-        CERT=$(kubectl get csr "$CSR_NAME" -o jsonpath='{.status.certificate}')
 
+    for ((i = 1; i <= $((TIMEOUT / RETRY_INTERVAL)); i++)); do
+        CERT=$(kubectl get csr "$CSR_NAME" -o jsonpath='{.status.certificate}')
         if [[ -n "$CERT" ]]; then
             if (( LOG_LEVEL > 0)); then
                 echo "Certificate available"
             fi
-            echo "$CERT" | base64 -d > $CERT_DIR/cert.crt
             break
         fi
 
         if (( LOG_LEVEL > 0)); then
             echo "Waiting for certificate to be populated..."
         fi
-        sleep 5
+        sleep $RETRY_INTERVAL
     done
 
-    if (( LOG_LEVEL > 0 )); then
-        echo "Kubelet certificate generation completed."
+    if [[ -z "$CERT" ]]; then
+        echo "Kubelet certificate generation failed" >&2
+        exit 1
     fi
 
-    if (( LOG_LEVEL > 1 )); then
-        ls -la "$CERT_DIR"/cert.key "$CERT_DIR"/cert.crt
+    echo "$CERT" | base64 -d > $CERT_DIR/cert.crt
+    if (( LOG_LEVEL > 0 )); then
+        echo "Kubelet certificate generation completed."
     fi
     set +e
