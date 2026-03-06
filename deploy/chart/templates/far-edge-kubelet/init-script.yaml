@@ -7,68 +7,72 @@ data:
     #!/bin/bash
 
     set -e
-    # Define the namespace for the Far-Edge Kubelet
+    LOG_LEVEL=1
     NAMESPACE="${NAMESPACE:-default}"
-    # Define the name of the CSR
     CSR_NAME="$NODE_NAME-far-edge-kubelet-serving-cert"
-    # Define the location where the key and CSR will be saved
     CERT_DIR="/etc/certificates"
 
-    # Create the directory if it doesn't exist
     mkdir -p $CERT_DIR
 
-    # Generate a private key and CSR using OpenSSL
-    echo "Generating private key and CSR..."
-    openssl req -new -newkey rsa:2048 -days 365 -nodes -keyout $CERT_DIR/cert.key -out $CERT_DIR/cert.csr \
+    if (( LOG_LEVEL > 0)); then
+        echo "Generating private key and CSR..."
+    fi
+    openssl ecparam -name prime256v1 -genkey -noout -out $CERT_DIR/cert.key
+    openssl req -new -key $CERT_DIR/cert.key -nodes -out $CERT_DIR/cert.csr \
         -subj "/CN=system:node:${NODE_NAME}/O=system:nodes" \
         -addext "subjectAltName = IP:$POD_IP, DNS:$NODE_NAME.$NAMESPACE, DNS:$NODE_NAME.$NAMESPACE.svc"
 
-    # Base64 encode the CSR
     CSR_BASE64=$(cat $CERT_DIR/cert.csr | base64 | tr -d '\n')
 
-    # Delete CSR object of previous kubelets from Kubernetes using kubectl
-    set +e
-    kubectl delete csr $CSR_NAME
-    set -e 
+    kubectl delete csr "$CSR_NAME" --ignore-not-found 
 
-    echo "Creating CSR object in Kubernetes..."
+    if (( LOG_LEVEL > 0)); then
+        echo "Creating CSR object in Kubernetes..."
+    fi
     kubectl apply -f - <<EOF
     apiVersion: certificates.k8s.io/v1
     kind: CertificateSigningRequest
     metadata:
-      name: $CSR_NAME
+        name: $CSR_NAME
     spec:
-      request: $CSR_BASE64
-      signerName: kubernetes.io/kubelet-serving
-      usages:
-      - key encipherment 
-      - digital signature
-      - server auth
+        request: $CSR_BASE64
+        signerName: kubernetes.io/kubelet-serving
+        usages:
+        - key encipherment 
+        - digital signature
+        - server auth
     EOF
 
-    # Wait for the CSR to be approved and signed
-    echo "Waiting for CSR approval..."
-    kubectl certificate approve $CSR_NAME
+    kubectl certificate approve "$CSR_NAME"
+    if (( LOG_LEVEL > 0)); then
+        echo "Approved CSR"
+    fi
 
-    # Wait for the certificate to be signed
-    echo "Waiting for the certificate to be signed..."
-    while true; do
-      # Check the status of the CSR
-      STATUS=$(kubectl get csr $CSR_NAME -o jsonpath='{.status.conditions[?(@.type=="Approved")].status}')
+    if (( LOG_LEVEL > 0)); then
+        echo "Waiting for request to be signed and certificate populated..."
+    fi
+    for _ in {1..120}; do
+        CERT=$(kubectl get csr "$CSR_NAME" -o jsonpath='{.status.certificate}')
 
-      if [[ "$STATUS" == "True" ]]; then
-        echo "CSR approved and signed."
-        break
-      else
-        echo "Waiting for approval..."
+        if [[ -n "$CERT" ]]; then
+            if (( LOG_LEVEL > 0)); then
+                echo "Certificate available"
+            fi
+            echo "$CERT" | base64 -d > $CERT_DIR/cert.crt
+            break
+        fi
+
+        if (( LOG_LEVEL > 0)); then
+            echo "Waiting for certificate to be populated..."
+        fi
         sleep 5
-      fi
     done
 
-    # Retrieve the signed certificate
-    echo "Retrieving the signed certificate..."
-    kubectl get csr $CSR_NAME -o jsonpath='{.status.certificate}' | base64 -d > $CERT_DIR/cert.crt
+    if (( LOG_LEVEL > 0 )); then
+        echo "Kubelet certificate generation completed."
+    fi
 
-    echo "Certificate generation and signing completed."
-
+    if (( LOG_LEVEL > 0 )); then
+        ls -la "$CERT_DIR"/cert.key "$CERT_DIR"/cert.crt
+    fi
     set +e
