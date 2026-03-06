@@ -33,14 +33,14 @@ data:
     apiVersion: certificates.k8s.io/v1
     kind: CertificateSigningRequest
     metadata:
-        name: $CSR_NAME
+      name: $CSR_NAME
     spec:
-        request: $CSR_BASE64
-        signerName: kubernetes.io/kubelet-serving
-        usages:
-        - key encipherment 
-        - digital signature
-        - server auth
+      request: $CSR_BASE64
+      signerName: kubernetes.io/kubelet-serving
+      usages:
+      - key encipherment 
+      - digital signature
+      - server auth
     EOF
 
     kubectl certificate approve "$CSR_NAME"
