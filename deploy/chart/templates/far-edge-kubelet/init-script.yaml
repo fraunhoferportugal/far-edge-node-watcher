@@ -72,7 +72,7 @@ data:
         echo "Kubelet certificate generation completed."
     fi
 
-    if (( LOG_LEVEL > 0 )); then
+    if (( LOG_LEVEL > 1 )); then
         ls -la "$CERT_DIR"/cert.key "$CERT_DIR"/cert.crt
     fi
     set +e
