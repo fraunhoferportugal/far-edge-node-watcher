@@ -9,7 +9,11 @@ farEdgeKubelet:
   image:
     repository: ghcr.io/fraunhoferportugal/fita/components/far-edge-kubelet
     pullPolicy: Always
-    tag: 0.0.1
+    tag: 0.0.2
+  initScript:
+    timeoutSeconds: 120
+    retryIntervalSeconds: 5
+    logLevel: 0
   registry:
     url: ''
     insecure: false
