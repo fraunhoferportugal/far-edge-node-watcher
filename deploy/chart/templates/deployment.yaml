@@ -38,6 +38,12 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - name: trust-bundle
+              mountPath: /etc/ssl/fita
+              readOnly: true
+            - name: fenw-mqtt-client-tls
+              mountPath: /etc/ssl/mqtt-client
           command: [ "python3", "-u", "main.py" ]
           args:
             - --mqtt_uri={{ include "missing.required" (dict "Message" "MQTT broker host is required" "Value" .Values.mqttBroker.host) }}
@@ -92,6 +98,13 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- with .Values.nodeSelector }}
+      volumes:
+        - name: trust-bundle
+          configMap:
+            name: trust-bundle-confmap
+        - name: fenw-mqtt-client-tls
+          secret:
+            secretName: fenw-mqtt-client-secret
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
