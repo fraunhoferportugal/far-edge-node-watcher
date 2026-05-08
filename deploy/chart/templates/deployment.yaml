@@ -101,7 +101,7 @@ spec:
       volumes:
         - name: trust-bundle
           configMap:
-            name: trust-bundle-confmap
+            name: fita-trust-bundle
         - name: fenw-mqtt-client-tls
           secret:
             secretName: fenw-mqtt-client-secret
