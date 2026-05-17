@@ -97,7 +97,6 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- with .Values.nodeSelector }}
       volumes:
         - name: trust-bundle
           configMap:
@@ -105,6 +104,7 @@ spec:
         - name: fenw-mqtt-client-tls
           secret:
             secretName: fenw-mqtt-client-secret
+      {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
