@@ -37,6 +37,8 @@ mqttBroker:
   host: ''
   port: 1883
   clientId: far-edge-node-watcher
+  serverTLS: false
+  mutualTLS: false # this is an upgrade over the previous
 podAnnotations: {}
 podLabels: {}
 podSecurityContext:
