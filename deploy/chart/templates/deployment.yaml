@@ -110,10 +110,18 @@ spec:
       volumes:
         - name: trust-bundle
           configMap:
+          {{- if .Values.mqttBroker.trustBundleConfigMap }}
+            name: {{ .Values.mqttBroker.trustBundleConfigMap }}
+          {{- else }}
             name: fita-trust-bundle
+          {{- end }}
         - name: fenw-mqtt-client-tls
           secret:
+          {{- if .Values.mqttBroker.tlsClientSecret }}
+            secretName: {{ .Values.mqttBroker.tlsClientSecret }}
+          {{- else }}
             secretName: fenw-mqtt-client-secret
+          {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
