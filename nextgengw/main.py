@@ -6,6 +6,7 @@ import time
 import json
 import sys
 import os
+import ssl
 import argparse
 
 import traceback
@@ -354,6 +355,8 @@ def main():
   parser.add_argument('--mqtt_uri', help='MQTT Broker URI', required=True)
   parser.add_argument('--mqtt_port', help='MQTT Broker Port', required=True)
   parser.add_argument('--mqtt_client_id', help='MQTT Broker Client ID', required=True)
+  parser.add_argument('--mqtt_server_tls', default=False, help='Whether to use tls with broker certificate', action='store_true', required=False)
+  parser.add_argument('--mqtt_mutual_tls', default=False, help='Whether to use tls with broker and client certificates', action='store_true', required=False)
 
   parser.add_argument('--kubelet_image', help='Image name for the Far Edge Kubelet', required=True)
   parser.add_argument('--image_pull_secret', help="Name of the registry credentials used to pull the far-edge kubelet image", default=[], action='append', dest="image_pull_secrets")
@@ -372,10 +375,16 @@ def main():
 
   # parse the command line arguments
   args = parser.parse_args()
+  if args.mqtt_server_tls or args.mqtt_mutual_tls:
+      port = 8883
+  else:
+      port = args.mqtt_port
 
   print(f'mqtt_uri={args.mqtt_uri}')
-  print(f'mqtt_port={args.mqtt_port}')
+  print(f'mqtt_port={port}')
   print(f'mqtt_client_id={args.mqtt_client_id}')
+  print(f'mqtt_server_tls={args.mqtt_server_tls}')
+  print(f'mqtt_mutual_tls={args.mqtt_mutual_tls}')
   print(f'kubelet_image={args.kubelet_image}')
   print(f'local_registry_path={args.local_registry_path}')
   print(f'remote_registry_url={args.remote_registry_url}')
@@ -400,17 +409,32 @@ def main():
 
   not_connected = True
   i = 0
+  if args.mqtt_mutual_tls:
+      print("Mutual TLS setup")
+      client.tls_set(ca_certs="/etc/ssl/fita/ca.crt", keyfile="/etc/ssl/mqtt-client/tls.key", certfile="/etc/ssl/mqtt-client/tls.crt")
+  elif args.mqtt_server_tls:
+      print("TLS setup")
+      client.tls_set(ca_certs="/etc/ssl/fita/ca.crt")
+
   while not_connected:
     try:
-      client.connect(args.mqtt_uri, int(args.mqtt_port))
-      not_connected = False
+      if args.mqtt_server_tls or args.mqtt_mutual_tls:
+        print("attempting tls connection")
+        client.connect(args.mqtt_uri, 8883)
+        not_connected = False
+        print("Successfully connected with tls encryption")
+      else:
+        print("attempting normal connection")
+        client.connect(args.mqtt_uri, int(args.mqtt_port))
+        not_connected = False
+        print("Successfully connected")
     
     except ConnectionRefusedError:
       print("MQTT broker not ready. Retrying in 5 seconds. Retry number " + str(i))
       i = i+1
     
     except Exception as e: # client.connect raises a different exception when uri name can't be resolved causing the node-watcher to crash
-      print(e)
+      print(f"TLS/connection error ({type(e).__name__}): {e}")
       print("MQTT broker: Name does not resolve. Incorrect broker Name or MQTT broker not ready. Retrying in 5 seconds...")
       i = i+1
     
