@@ -38,11 +38,26 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if or (.Values.mqttBroker.serverTLS) (.Values.mqttBroker.mutualTLS) }}
+          volumeMounts:
+            - name: trust-bundle
+              mountPath: /etc/ssl/fita
+              readOnly: true
+            - name: fenw-mqtt-client-tls
+              mountPath: /etc/ssl/mqtt-client
+              readOnly: true
+          {{- end }}
           command: [ "python3", "-u", "main.py" ]
           args:
             - --mqtt_uri={{ include "missing.required" (dict "Message" "MQTT broker host is required" "Value" .Values.mqttBroker.host) }}
             - --mqtt_port={{ .Values.mqttBroker.port }}
             - --mqtt_client_id={{ .Values.mqttBroker.clientId }}
+          {{- if .Values.mqttBroker.serverTLS }}
+            - --mqtt_server_tls
+          {{- end }}
+          {{- if .Values.mqttBroker.mutualTLS }}
+            - --mqtt_mutual_tls
+          {{- end }}
             - --kubelet_image={{ .Values.farEdgeKubelet.image.repository }}:{{ .Values.farEdgeKubelet.image.tag }}
             - --image_pull_policy={{ .Values.farEdgeKubelet.image.pullPolicy }}
             - --local_registry_path={{ .Values.farEdgeKubelet.registry.localRegistry }}
@@ -91,6 +106,23 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+      {{- if or (.Values.mqttBroker.serverTLS) (.Values.mqttBroker.mutualTLS) }}
+      volumes:
+        - name: trust-bundle
+          configMap:
+          {{- if .Values.mqttBroker.trustBundleConfigMap }}
+            name: {{ .Values.mqttBroker.trustBundleConfigMap }}
+          {{- else }}
+            name: fita-trust-bundle
+          {{- end }}
+        - name: fenw-mqtt-client-tls
+          secret:
+          {{- if .Values.mqttBroker.tlsClientSecret }}
+            secretName: {{ .Values.mqttBroker.tlsClientSecret }}
+          {{- else }}
+            secretName: fenw-mqtt-client-secret
+          {{- end }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

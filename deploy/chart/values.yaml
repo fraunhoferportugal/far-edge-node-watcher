@@ -37,6 +37,10 @@ mqttBroker:
   host: ''
   port: 1883
   clientId: far-edge-node-watcher
+  serverTLS: false
+  mutualTLS: false # this is an upgrade over the previous
+  trustBundleConfigMap: fita-trust-bundle
+  tlsClientSecret: fenw-mqtt-client-secret
 podAnnotations: {}
 podLabels: {}
 podSecurityContext:
